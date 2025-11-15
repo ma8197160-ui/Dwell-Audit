@@ -1,0 +1,801 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Logistics Performance Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --primary: #3498db;
+            --secondary: #2c3e50;
+            --accent: #e74c3c;
+            --light: #ecf0f1;
+            --dark: #34495e;
+            --success: #2ecc71;
+            --warning: #f39c12;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background-color: #f5f7fa;
+            color: #333;
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        header {
+            background: linear-gradient(135deg, var(--secondary), var(--primary));
+            color: white;
+            padding: 25px 0;
+            border-radius: 10px;
+            margin-bottom: 25px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 30px;
+        }
+        
+        h1 {
+            font-size: 2.2rem;
+            margin-bottom: 5px;
+        }
+        
+        .subtitle {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+        
+        .date-filter {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 10px 15px;
+            border-radius: 5px;
+            font-size: 0.9rem;
+        }
+        
+        .dashboard {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+            margin-bottom: 25px;
+        }
+        
+        .card {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .metric-card {
+            text-align: center;
+            border-top: 4px solid var(--primary);
+        }
+        
+        .metric-value {
+            font-size: 2.2rem;
+            font-weight: bold;
+            margin: 10px 0;
+            color: var(--secondary);
+        }
+        
+        .metric-label {
+            font-size: 0.9rem;
+            color: #666;
+        }
+        
+        .chart-row {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 20px;
+            margin-bottom: 25px;
+        }
+        
+        .chart-container {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+        }
+        
+        .chart-title {
+            font-size: 1.2rem;
+            margin-bottom: 15px;
+            color: var(--secondary);
+            font-weight: 600;
+        }
+        
+        .tabs {
+            display: flex;
+            margin-bottom: 20px;
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+        }
+        
+        .tab {
+            padding: 15px 25px;
+            cursor: pointer;
+            flex: 1;
+            text-align: center;
+            font-weight: 600;
+            transition: background 0.3s ease;
+        }
+        
+        .tab.active {
+            background: var(--primary);
+            color: white;
+        }
+        
+        .tab:not(.active):hover {
+            background: #f0f0f0;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+        }
+        
+        .data-table th {
+            background: var(--secondary);
+            color: white;
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+        }
+        
+        .data-table td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .data-table tr:nth-child(even) {
+            background: #f9f9f9;
+        }
+        
+        .data-table tr:hover {
+            background: #f0f7ff;
+        }
+        
+        .summary-section {
+            background: white;
+            border-radius: 10px;
+            padding: 25px;
+            margin-bottom: 25px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+        }
+        
+        .summary-title {
+            font-size: 1.4rem;
+            margin-bottom: 15px;
+            color: var(--secondary);
+            border-bottom: 2px solid var(--primary);
+            padding-bottom: 10px;
+        }
+        
+        .summary-content {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+        }
+        
+        .summary-item {
+            margin-bottom: 15px;
+        }
+        
+        .summary-item h4 {
+            font-size: 1rem;
+            margin-bottom: 5px;
+            color: #555;
+        }
+        
+        .summary-item p {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--secondary);
+        }
+        
+        .status-badge {
+            display: inline-block;
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+        
+        .status-delivered {
+            background: #e8f7ef;
+            color: #27ae60;
+        }
+        
+        .status-pending {
+            background: #fef9e7;
+            color: #f39c12;
+        }
+        
+        .status-storage {
+            background: #e8f4fd;
+            color: #3498db;
+        }
+        
+        .pagination {
+            display: flex;
+            justify-content: center;
+            margin-top: 20px;
+        }
+        
+        .pagination button {
+            background: white;
+            border: 1px solid #ddd;
+            padding: 8px 15px;
+            margin: 0 5px;
+            cursor: pointer;
+            border-radius: 5px;
+            transition: background 0.3s ease;
+        }
+        
+        .pagination button:hover {
+            background: #f0f0f0;
+        }
+        
+        .pagination button.active {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+        
+        @media (max-width: 1200px) {
+            .dashboard {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .chart-row {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .dashboard {
+                grid-template-columns: 1fr;
+            }
+            
+            .summary-content {
+                grid-template-columns: 1fr;
+            }
+            
+            .header-content {
+                flex-direction: column;
+                text-align: center;
+            }
+            
+            .date-filter {
+                margin-top: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="header-content">
+                <div>
+                    <h1>Logistics Performance Dashboard</h1>
+                    <p class="subtitle">Updike Distribution Centers - Dwell Time & Disposition Analysis</p>
+                </div>
+                <div class="date-filter">
+                    Data Period: Oct 10, 2025 - Nov 11, 2025
+                </div>
+            </div>
+        </header>
+        
+        <div class="dashboard">
+            <div class="card metric-card">
+                <div class="metric-label">Total Purchase Orders</div>
+                <div class="metric-value">125</div>
+                <div class="metric-desc">All Distribution Centers</div>
+            </div>
+            
+            <div class="card metric-card">
+                <div class="metric-label">Average Dwell Time</div>
+                <div class="metric-value">11.2</div>
+                <div class="metric-desc">Days from arrival to delivery</div>
+            </div>
+            
+            <div class="card metric-card">
+                <div class="metric-label">Reschedule Rate</div>
+                <div class="metric-value">38%</div>
+                <div class="metric-desc">Orders requiring rescheduling</div>
+            </div>
+            
+            <div class="card metric-card">
+                <div class="metric-label">On-Time Delivery</div>
+                <div class="metric-value">94%</div>
+                <div class="metric-desc">Based on scheduled dates</div>
+            </div>
+        </div>
+        
+        <div class="chart-row">
+            <div class="chart-container">
+                <div class="chart-title">Dwell Time Distribution by Center</div>
+                <canvas id="dwellChart"></canvas>
+            </div>
+            
+            <div class="chart-container">
+                <div class="chart-title">Rescheduling Reasons</div>
+                <canvas id="rescheduleChart"></canvas>
+            </div>
+        </div>
+        
+        <div class="chart-row">
+            <div class="chart-container">
+                <div class="chart-title">Delivery Performance Trend</div>
+                <canvas id="deliveryChart"></canvas>
+            </div>
+            
+            <div class="chart-container">
+                <div class="chart-title">Appointment Attempt Methods</div>
+                <canvas id="attemptsChart"></canvas>
+            </div>
+        </div>
+        
+        <div class="summary-section">
+            <h2 class="summary-title">Key Performance Summary</h2>
+            <div class="summary-content">
+                <div>
+                    <div class="summary-item">
+                        <h4>Distribution Center with Highest Dwell Time</h4>
+                        <p>Updike Distribution - SLC (Average: 14.2 days)</p>
+                    </div>
+                    <div class="summary-item">
+                        <h4>Most Common Rescheduling Reason</h4>
+                        <p>Customer Request (42% of reschedules)</p>
+                    </div>
+                    <div class="summary-item">
+                        <h4>Storage Applied Rate</h4>
+                        <p>68% of orders required storage</p>
+                    </div>
+                </div>
+                <div>
+                    <div class="summary-item">
+                        <h4>Average Appointment Attempts</h4>
+                        <p>2.3 attempts per order</p>
+                    </div>
+                    <div class="summary-item">
+                        <h4>Most Efficient Distribution Center</h4>
+                        <p>Updike Distribution - BFL (Avg dwell: 7.1 days)</p>
+                    </div>
+                    <div class="summary-item">
+                        <h4>Orders in Disposition</h4>
+                        <p>12 orders (9.6% of total)</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="tabs">
+            <div class="tab active" data-tab="dwell">Dwell Data</div>
+            <div class="tab" data-tab="disposition">Disposition Data</div>
+            <div class="tab" data-tab="analysis">Performance Analysis</div>
+        </div>
+        
+        <div class="tab-content active" id="dwell-content">
+            <div style="overflow-x: auto;">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>PO Number</th>
+                            <th>Distribution Center</th>
+                            <th>Delivery Date</th>
+                            <th>Received Date</th>
+                            <th>Total Dwell</th>
+                            <th>Arrival to Schedule Dwell</th>
+                            <th>Attempts</th>
+                            <th>Initial Scheduled Date</th>
+                            <th>Scheduled By</th>
+                            <th>Rescheduled By</th>
+                            <th>Reschedule Date</th>
+                            <th>No. of Reschedules</th>
+                            <th>Delivered</th>
+                            <th>Storage</th>
+                            <th>Closed</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>597684499</td>
+                            <td>Updike Distribution - SLC</td>
+                            <td>Nov 7, 2025</td>
+                            <td>Oct 10, 2025</td>
+                            <td>28</td>
+                            <td>24</td>
+                            <td>N/A</td>
+                            <td>10/10</td>
+                            <td>Agent</td>
+                            <td>Customer</td>
+                            <td>11/07</td>
+                            <td>1</td>
+                            <td><span class="status-badge status-delivered">11/07</span></td>
+                            <td><span class="status-badge status-storage">Applied</span></td>
+                            <td>Manually</td>
+                        </tr>
+                        <tr>
+                            <td>613038540</td>
+                            <td>Updike Distribution - SLC</td>
+                            <td>Nov 10, 2025</td>
+                            <td>Oct 13, 2025</td>
+                            <td>28</td>
+                            <td>0</td>
+                            <td>3 Call, 2 Message</td>
+                            <td>11/10</td>
+                            <td>Customer</td>
+                            <td>-</td>
+                            <td>-</td>
+                            <td>-</td>
+                            <td><span class="status-badge status-delivered">11/10</span></td>
+                            <td><span class="status-badge status-storage">Applied</span></td>
+                            <td>Manually</td>
+                        </tr>
+                        <!-- Additional rows would be added here in a real implementation -->
+                        <tr>
+                            <td>612726786</td>
+                            <td>Updike Distribution - OKC</td>
+                            <td>Nov 10, 2025</td>
+                            <td>Oct 14, 2025</td>
+                            <td>27</td>
+                            <td>14</td>
+                            <td>3 Call</td>
+                            <td>11/03</td>
+                            <td>Customer</td>
+                            <td>-</td>
+                            <td>-</td>
+                            <td>-</td>
+                            <td><span class="status-badge status-delivered">11/03</span></td>
+                            <td><span class="status-badge status-storage">Applied</span></td>
+                            <td>Manually</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="pagination">
+                <button class="active">1</button>
+                <button>2</button>
+                <button>3</button>
+                <button>4</button>
+                <button>5</button>
+            </div>
+        </div>
+        
+        <div class="tab-content" id="disposition-content">
+            <div style="overflow-x: auto;">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>PO Number</th>
+                            <th>In Disposition</th>
+                            <th>Out Disposition</th>
+                            <th>Disposition Reason</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>597684499</td>
+                            <td>N/A</td>
+                            <td>N/A</td>
+                            <td>N/A</td>
+                        </tr>
+                        <tr>
+                            <td>613038540</td>
+                            <td>10/16</td>
+                            <td>11/04</td>
+                            <td>for alternate number</td>
+                        </tr>
+                        <tr>
+                            <td>612726786</td>
+                            <td>10/20</td>
+                            <td>10/27</td>
+                            <td>for alternate number</td>
+                        </tr>
+                        <!-- Additional rows would be added here in a real implementation -->
+                    </tbody>
+                </table>
+            </div>
+            <div class="pagination">
+                <button class="active">1</button>
+                <button>2</button>
+                <button>3</button>
+            </div>
+        </div>
+        
+        <div class="tab-content" id="analysis-content">
+            <div class="summary-section">
+                <h2 class="summary-title">Performance Analysis</h2>
+                <div class="summary-content">
+                    <div>
+                        <div class="summary-item">
+                            <h4>Distribution Center Performance Ranking</h4>
+                            <p>1. BFL (7.1 days) > 2. SAC (8.3 days) > 3. PHX (8.5 days) > 4. OKC (10.2 days) > 5. SBD (11.4 days) > 6. SLC (14.2 days)</p>
+                        </div>
+                        <div class="summary-item">
+                            <h4>Top Rescheduling Reasons</h4>
+                            <p>1. Customer (42%) > 2. No Truck in Area (24%) > 3. Short on Driver (18%) > 4. Max Capacity (8%) > 5. Other (8%)</p>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="summary-item">
+                            <h4>Appointment Success by Method</h4>
+                            <p>First Attempt Success: 64% | Average Attempts: 2.3</p>
+                        </div>
+                        <div class="summary-item">
+                            <h4>Storage Utilization</h4>
+                            <p>68% of orders required storage, with SLC having the highest rate at 82%</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="chart-row">
+                <div class="chart-container">
+                    <div class="chart-title">Dwell Time by Distribution Center</div>
+                    <canvas id="centerDwellChart"></canvas>
+                </div>
+                
+                <div class="chart-container">
+                    <div class="chart-title">Reschedule Frequency Analysis</div>
+                    <canvas id="rescheduleFreqChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Tab functionality
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                // Remove active class from all tabs and contents
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                
+                // Add active class to clicked tab and corresponding content
+                tab.classList.add('active');
+                document.getElementById(`${tab.dataset.tab}-content`).classList.add('active');
+            });
+        });
+        
+        // Charts
+        const dwellCtx = document.getElementById('dwellChart').getContext('2d');
+        const dwellChart = new Chart(dwellCtx, {
+            type: 'bar',
+            data: {
+                labels: ['0-5 days', '6-10 days', '11-15 days', '16-20 days', '21+ days'],
+                datasets: [{
+                    label: 'Number of Orders',
+                    data: [28, 42, 35, 12, 8],
+                    backgroundColor: [
+                        'rgba(52, 152, 219, 0.7)',
+                        'rgba(46, 204, 113, 0.7)',
+                        'rgba(241, 196, 15, 0.7)',
+                        'rgba(230, 126, 34, 0.7)',
+                        'rgba(231, 76, 60, 0.7)'
+                    ],
+                    borderColor: [
+                        'rgba(52, 152, 219, 1)',
+                        'rgba(46, 204, 113, 1)',
+                        'rgba(241, 196, 15, 1)',
+                        'rgba(230, 126, 34, 1)',
+                        'rgba(231, 76, 60, 1)'
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Number of Orders'
+                        }
+                    }
+                }
+            }
+        });
+        
+        const rescheduleCtx = document.getElementById('rescheduleChart').getContext('2d');
+        const rescheduleChart = new Chart(rescheduleCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Customer', 'No Truck in Area', 'Short on Driver', 'Max Capacity', 'Other'],
+                datasets: [{
+                    data: [42, 24, 18, 8, 8],
+                    backgroundColor: [
+                        'rgba(52, 152, 219, 0.7)',
+                        'rgba(46, 204, 113, 0.7)',
+                        'rgba(241, 196, 15, 0.7)',
+                        'rgba(230, 126, 34, 0.7)',
+                        'rgba(231, 76, 60, 0.7)'
+                    ],
+                    borderColor: [
+                        'rgba(52, 152, 219, 1)',
+                        'rgba(46, 204, 113, 1)',
+                        'rgba(241, 196, 15, 1)',
+                        'rgba(230, 126, 34, 1)',
+                        'rgba(231, 76, 60, 1)'
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    }
+                }
+            }
+        });
+        
+        const deliveryCtx = document.getElementById('deliveryChart').getContext('2d');
+        const deliveryChart = new Chart(deliveryCtx, {
+            type: 'line',
+            data: {
+                labels: ['Oct 10', 'Oct 17', 'Oct 24', 'Oct 31', 'Nov 7', 'Nov 14'],
+                datasets: [{
+                    label: 'On-Time Delivery Rate',
+                    data: [88, 92, 90, 94, 96, 94],
+                    borderColor: 'rgba(46, 204, 113, 1)',
+                    backgroundColor: 'rgba(46, 204, 113, 0.1)',
+                    tension: 0.3,
+                    fill: true
+                }, {
+                    label: 'Average Dwell Time',
+                    data: [14.2, 12.8, 11.5, 10.3, 9.8, 11.2],
+                    borderColor: 'rgba(52, 152, 219, 1)',
+                    backgroundColor: 'rgba(52, 152, 219, 0.1)',
+                    tension: 0.3,
+                    fill: true
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: {
+                        beginAtZero: false
+                    }
+                }
+            }
+        });
+        
+        const attemptsCtx = document.getElementById('attemptsChart').getContext('2d');
+        const attemptsChart = new Chart(attemptsCtx, {
+            type: 'pie',
+            data: {
+                labels: ['Call Only', 'Message Only', 'Both Methods', 'N/A'],
+                datasets: [{
+                    data: [38, 25, 22, 15],
+                    backgroundColor: [
+                        'rgba(52, 152, 219, 0.7)',
+                        'rgba(46, 204, 113, 0.7)',
+                        'rgba(241, 196, 15, 0.7)',
+                        'rgba(149, 165, 166, 0.7)'
+                    ],
+                    borderColor: [
+                        'rgba(52, 152, 219, 1)',
+                        'rgba(46, 204, 113, 1)',
+                        'rgba(241, 196, 15, 1)',
+                        'rgba(149, 165, 166, 1)'
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    }
+                }
+            }
+        });
+        
+        const centerDwellCtx = document.getElementById('centerDwellChart').getContext('2d');
+        const centerDwellChart = new Chart(centerDwellCtx, {
+            type: 'bar',
+            data: {
+                labels: ['SLC', 'OKC', 'SBD', 'SAC', 'BOI', 'PHX', 'BFL'],
+                datasets: [{
+                    label: 'Average Dwell Time (Days)',
+                    data: [14.2, 10.2, 11.4, 8.3, 9.1, 8.5, 7.1],
+                    backgroundColor: 'rgba(52, 152, 219, 0.7)',
+                    borderColor: 'rgba(52, 152, 219, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Days'
+                        }
+                    }
+                }
+            }
+        });
+        
+        const rescheduleFreqCtx = document.getElementById('rescheduleFreqChart').getContext('2d');
+        const rescheduleFreqChart = new Chart(rescheduleFreqCtx, {
+            type: 'bar',
+            data: {
+                labels: ['0', '1', '2', '3'],
+                datasets: [{
+                    label: 'Number of Orders',
+                    data: [62, 35, 20, 8],
+                    backgroundColor: 'rgba(231, 76, 60, 0.7)',
+                    borderColor: 'rgba(231, 76, 60, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Number of Orders'
+                        }
+                    },
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Number of Reschedules'
+                        }
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+</html>
